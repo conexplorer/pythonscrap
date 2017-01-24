@@ -13,46 +13,33 @@ def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1, 
                  proxy=None, num_retries=1):
     """Crawl from the given seed URL following links matched by link_regex
     """
-    # the queue of URL's that still need to be crawled
-    crawl_queue = Queue.deque([seed_url])
-    # the URL's that have been seen and at what depth
-    seen = {seed_url: 0}
-    # track how many URL's have been downloaded
-    num_urls = 0
+    crawl_queue = Queue.deque([seed_url])           # the queue of URL's that still need to be crawled
+    seen = {seed_url: 0}            # the URL's that have been seen and at what depth
+    num_urls = 0            # track how many URL's have been downloaded
     rp = get_robots(seed_url)
     throttle = Throttle(delay)
-    headers = headers or {}
+    headers = headers or {}         #headers = {'User-agent': user_agent('wswp')}
     if user_agent:
         headers['User-agent'] = user_agent
-
     while crawl_queue:
         url = crawl_queue.pop()
-        # check url passes robots.txt restrictions
-        if rp.can_fetch(user_agent, url):
+        if rp.can_fetch(user_agent, url):           # check url passes robots.txt restrictions
             throttle.wait(url)
             html = download(url, headers, proxy=proxy, num_retries=num_retries)
             links = []
 
             depth = seen[url]
-            if depth != max_depth:
-                # can still crawl further
-                if link_regex:
-                    # filter for links matching our regular expression
+            if depth != max_depth:          # can still crawl further
+                if link_regex:          # filter for links matching our regular expression
                     links.extend(link for link in get_links(html) if re.match(link_regex, link))
-
                 for link in links:
-                    link = normalize(seed_url, link)
-                    # check whether already crawled this link
+                    link = normalize(seed_url, link)            # check whether already crawled this link
                     if link not in seen:
-                        seen[link] = depth + 1
-                        # check link is within same domain
+                        seen[link] = depth + 1          # check link is within same domain
                         if same_domain(seed_url, link):
-                            # success! add this new link to queue
-                            crawl_queue.append(link)
-
-            # check whether have reached downloaded maximum
+                            crawl_queue.append(link)            # success! add this new link to queue
             num_urls += 1
-            if num_urls == max_urls:
+            if num_urls == max_urls:            # check whether have reached downloaded maximum
                 break
         else:
             print 'Blocked by robots.txt:', url
@@ -61,7 +48,6 @@ def link_crawler(seed_url, link_regex=None, delay=5, max_depth=-1, max_urls=-1, 
 class Throttle:
     """Throttle downloading by sleeping between requests to same domain
     """
-
     def __init__(self, delay):
         # amount of delay between downloads for each domain
         self.delay = delay
@@ -69,7 +55,7 @@ class Throttle:
         self.domains = {}
 
     def wait(self, url):
-        domain = urlparse.urlparse(url).netloc
+        domain = urlparse.urlparse(url).netloc          #解析url并取出链接的主网址netloc部分
         last_accessed = self.domains.get(domain)
 
         if self.delay > 0 and last_accessed is not None:
